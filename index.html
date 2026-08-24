@@ -64,8 +64,8 @@
   <div class="game-menu">
     <button class="game-btn active" onclick="switchGame('breakout', this)">Blocos</button>
     <button class="game-btn" onclick="switchGame('pacman', this)">Pac-Man</button>
+    <button class="game-btn" onclick="switchGame('sudoku', this)">Sudoku</button>
     <button class="game-btn" onclick="switchGame('minesweeper', this)">Campo Minado (Fase 2)</button>
-    <button class="game-btn" onclick="switchGame('sudoku', this)">Sudoku (Fase 3)</button>
     <button class="game-btn" onclick="switchGame('solitaire', this)">Paciência (Fase 4)</button>
   </div>
 
@@ -77,12 +77,12 @@
     <canvas id="pacmanCanvas" width="380" height="420"></canvas>
   </div>
 
-  <div id="minesweeper-game" class="game-container">
-    <p>Campo Minado será liberado na Fase 2!</p>
+  <div id="sudoku-game" class="game-container">
+    <canvas id="sudokuCanvas" width="380" height="400"></canvas>
   </div>
 
-  <div id="sudoku-game" class="game-container">
-    <p>Sudoku será liberado na Fase 3!</p>
+  <div id="minesweeper-game" class="game-container">
+    <p>Campo Minado será liberado na Fase 2!</p>
   </div>
 
   <div id="solitaire-game" class="game-container">
@@ -103,6 +103,8 @@
         initPacman();
       } else if (gameId === 'breakout') {
         initBreakout();
+      } else if (gameId === 'sudoku') {
+        initSudoku();
       }
     }
   </script>
