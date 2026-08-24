@@ -1,74 +1,47 @@
-const canvas = document.getElementById("myCanvas");
-const ctx = canvas.getContext("2d");
-
-// Garante foco imediato na janela
-window.focus();
-
-let x = canvas.width / 2;
-let y = canvas.height - 30;
-let baseSpeed = 3;
-let dx = baseSpeed;
-let dy = -baseSpeed;
-
+/* =========================================================
+   1. JOGO DE BLOCOS (BREAKOUT)
+   ========================================================= */
+let breakoutCanvas, breakoutCtx;
+let bX, bY, bDx, bDy;
 const ballRadius = 6;
-
-// Configurações padrão da plataforma
 const DEFAULT_PADDLE_WIDTH = 85;
 const DEFAULT_PADDLE_SPEED = 7;
+let paddleHeight = 12, paddleWidth, paddleX, paddleSpeed;
+let expandTimeout = null, speedTimeout = null;
+let rightPressed = false, leftPressed = false;
 
-let paddleHeight = 12;
-let paddleWidth = DEFAULT_PADDLE_WIDTH;
-let paddleX = (canvas.width - paddleWidth) / 2;
-let paddleSpeed = DEFAULT_PADDLE_SPEED;
+const rowCount = 6, colCount = 9;
+const brickWidth = 46, brickHeight = 14, brickPadding = 6;
+const brickOffsetTop = 40, brickOffsetLeft = 18;
+const rowColors = ["#f2427a", "#fa7268", "#f8c257", "#39c2d7", "#9b51e0", "#2ad2a0"];
 
-// Timers para controlar a duração dos bônus (6 segundos)
-let expandTimeout = null;
-let speedTimeout = null;
+let breakoutScore = 0, powerups = [], bricks = [];
+let breakoutAnimationFrame;
 
-let rightPressed = false;
-let leftPressed = false;
+function initBreakout() {
+  breakoutCanvas = document.getElementById("myCanvas");
+  breakoutCtx = breakoutCanvas.getContext("2d");
 
-// Configuração de Blocos
-const rowCount = 6;
-const colCount = 9;
-const brickWidth = 46;
-const brickHeight = 14;
-const brickPadding = 6;
-const brickOffsetTop = 40;
-const brickOffsetLeft = 18;
+  bX = breakoutCanvas.width / 2;
+  bY = breakoutCanvas.height - 30;
+  bDx = 3; bDy = -3;
+  paddleWidth = DEFAULT_PADDLE_WIDTH;
+  paddleSpeed = DEFAULT_PADDLE_SPEED;
+  paddleX = (breakoutCanvas.width - paddleWidth) / 2;
+  breakoutScore = 0;
+  powerups = [];
 
-// Paleta inspirada na imagem (tons pastel / pixel art retrô)
-const rowColors = [
-  "#f2427a", // Rosa Chiclete
-  "#fa7268", // Salmão / Coral
-  "#f8c257", // Amarelo Pastel
-  "#39c2d7", // Azul Turquesa
-  "#9b51e0", // Roxo / Lilás
-  "#2ad2a0"  // Verde Água
-];
-
-let score = 0;
-let powerups = [];
-
-const POWERUP_TYPES = {
-  EXPAND: { color: "#39c2d7", label: "↔" },
-  SPEED: { color: "#f8c257", label: "⚡" }
-};
-
-let bricks = [];
-
-function initBricks() {
   for (let c = 0; c < colCount; c++) {
     bricks[c] = [];
     for (let r = 0; r < rowCount; r++) {
       bricks[c][r] = { x: 0, y: 0, status: 1, color: rowColors[r % rowColors.length] };
     }
   }
+
+  if (breakoutAnimationFrame) cancelAnimationFrame(breakoutAnimationFrame);
+  drawBreakout();
 }
 
-initBricks();
-
-// Eventos de teclado
 window.addEventListener("keydown", (e) => {
   if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
   if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
@@ -79,179 +52,259 @@ window.addEventListener("keyup", (e) => {
   if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = false;
 });
 
-function spawnPowerup(x, y) {
-  if (Math.random() < 0.3) {
-    const type = Math.random() > 0.5 ? POWERUP_TYPES.EXPAND : POWERUP_TYPES.SPEED;
-    powerups.push({ x: x + brickWidth / 2, y: y, type: type, radius: 8 });
-  }
-}
+document.addEventListener("DOMContentLoaded", () => {
+  const canvas = document.getElementById("myCanvas");
+  canvas.addEventListener("touchmove", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const touchX = e.touches[0].clientX - rect.left;
+    paddleX = touchX - paddleWidth / 2;
+    if (paddleX < 0) paddleX = 0;
+    if (paddleX > canvas.width - paddleWidth) paddleX = canvas.width - paddleWidth;
+    e.preventDefault();
+  }, { passive: false });
+});
 
-function applyPowerup(type) {
-  if (type === POWERUP_TYPES.EXPAND) {
-    paddleWidth = 140;
-    if (expandTimeout) clearTimeout(expandTimeout);
-    expandTimeout = setTimeout(() => {
-      paddleWidth = DEFAULT_PADDLE_WIDTH;
-    }, 6000);
-  } else if (type === POWERUP_TYPES.SPEED) {
-    paddleSpeed = 12;
-    if (speedTimeout) clearTimeout(speedTimeout);
-    speedTimeout = setTimeout(() => {
-      paddleSpeed = DEFAULT_PADDLE_SPEED;
-    }, 6000);
-  }
-}
+function drawBreakout() {
+  breakoutCtx.fillStyle = "#1a181e";
+  breakoutCtx.fillRect(0, 0, breakoutCanvas.width, breakoutCanvas.height);
 
-function updatePowerups() {
-  for (let i = powerups.length - 1; i >= 0; i--) {
-    let p = powerups[i];
-    p.y += 2;
-
-    if (p.y + p.radius >= canvas.height - paddleHeight && p.x >= paddleX && p.x <= paddleX + paddleWidth) {
-      applyPowerup(p.type);
-      powerups.splice(i, 1);
-      continue;
-    }
-
-    if (p.y > canvas.height) {
-      powerups.splice(i, 1);
+  // Desenhar Blocos
+  for (let c = 0; c < colCount; c++) {
+    for (let r = 0; r < rowCount; r++) {
+      if (bricks[c][r].status === 1) {
+        const bx = c * (brickWidth + brickPadding) + brickOffsetLeft;
+        const by = r * (brickHeight + brickPadding) + brickOffsetTop;
+        bricks[c][r].x = bx; bricks[c][r].y = by;
+        breakoutCtx.beginPath();
+        breakoutCtx.rect(bx, by, brickWidth, brickHeight);
+        breakoutCtx.fillStyle = bricks[c][r].color;
+        breakoutCtx.fill();
+        breakoutCtx.closePath();
+      }
     }
   }
-}
 
-function drawPowerups() {
-  powerups.forEach((p) => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    ctx.fillStyle = p.type.color;
-    ctx.fill();
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = p.type.color;
-    ctx.closePath();
+  // Bola
+  breakoutCtx.beginPath();
+  breakoutCtx.arc(bX, bY, ballRadius, 0, Math.PI * 2);
+  breakoutCtx.fillStyle = "#ffffff";
+  breakoutCtx.fill();
+  breakoutCtx.closePath();
 
-    ctx.fillStyle = "#1e1e24";
-    ctx.font = "bold 10px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(p.type.label, p.x, p.y);
-    ctx.shadowBlur = 0;
-  });
-}
+  // Raquete
+  breakoutCtx.beginPath();
+  breakoutCtx.rect(paddleX, breakoutCanvas.height - paddleHeight, paddleWidth, paddleHeight);
+  breakoutCtx.fillStyle = "#39c2d7";
+  breakoutCtx.fill();
+  breakoutCtx.closePath();
 
-function resetGame() {
-  x = canvas.width / 2;
-  y = canvas.height - 30;
-  dx = baseSpeed;
-  dy = -baseSpeed;
-  paddleWidth = DEFAULT_PADDLE_WIDTH;
-  paddleSpeed = DEFAULT_PADDLE_SPEED;
-  paddleX = (canvas.width - paddleWidth) / 2;
-  score = 0;
-  powerups = [];
-  initBricks();
-}
+  // Placar
+  breakoutCtx.font = "bold 14px sans-serif";
+  breakoutCtx.fillStyle = "#f2427a";
+  breakoutCtx.fillText("SCORE: " + breakoutScore, 15, 25);
 
-function collisionDetection() {
+  // Colisões
   for (let c = 0; c < colCount; c++) {
     for (let r = 0; r < rowCount; r++) {
       const b = bricks[c][r];
       if (b.status === 1) {
-        if (x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
-          dy = -dy;
+        if (bX > b.x && bX < b.x + brickWidth && bY > b.y && bY < b.y + brickHeight) {
+          bDy = -bDy;
           b.status = 0;
-          score += 10;
-          spawnPowerup(b.x, b.y);
-
-          if (score === rowCount * colCount * 10) {
-            resetGame();
-          }
+          breakoutScore += 10;
         }
       }
     }
   }
+
+  if (bX + bDx > breakoutCanvas.width - ballRadius || bX + bDx < ballRadius) bDx = -bDx;
+  if (bY + bDy < ballRadius) bDy = -bDy;
+  else if (bY + bDy > breakoutCanvas.height - ballRadius) {
+    if (bX > paddleX && bX < paddleX + paddleWidth) {
+      bDy = -bDy;
+    } else {
+      initBreakout();
+      return;
+    }
+  }
+
+  if (rightPressed && paddleX < breakoutCanvas.width - paddleWidth) paddleX += paddleSpeed;
+  else if (leftPressed && paddleX > 0) paddleX -= paddleSpeed;
+
+  bX += bDx; bY += bDy;
+  breakoutAnimationFrame = requestAnimationFrame(drawBreakout);
 }
 
-function drawBall() {
-  ctx.beginPath();
-  ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
-  ctx.fillStyle = "#ffffff";
-  ctx.shadowBlur = 8;
-  ctx.shadowColor = "#ffffff";
-  ctx.fill();
-  ctx.closePath();
-  ctx.shadowBlur = 0;
+/* =========================================================
+   2. JOGO DO PAC-MAN
+   ========================================================= */
+let pacCanvas, pacCtx;
+let pacX = 190, pacY = 210;
+let pacDir = 0, nextPacDir = 0; // 0: Direita, 1: Baixo, 2: Esquerda, 3: Cima
+let pacSpeed = 2;
+let pacScore = 0;
+let pacAnimationFrame;
+
+const tileSize = 20;
+// 0: Vazio, 1: Parede, 2: Ponto
+const map = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,1],
+  [1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1],
+  [1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1],
+  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+  [1,2,1,1,2,1,2,1,1,1,1,1,2,1,2,1,1,2,1],
+  [1,2,2,2,2,1,2,2,2,1,2,2,2,1,2,2,2,2,1],
+  [1,1,1,1,2,1,1,1,0,1,0,1,1,1,2,1,1,1,1],
+  [0,0,0,1,2,1,0,0,0,0,0,0,0,1,2,1,0,0,0],
+  [1,1,1,1,2,1,0,1,1,0,1,1,0,1,2,1,1,1,1],
+  [0,0,0,0,2,0,0,1,0,0,0,1,0,0,2,0,0,0,0],
+  [1,1,1,1,2,1,0,1,1,1,1,1,0,1,2,1,1,1,1],
+  [0,0,0,1,2,1,0,0,0,0,0,0,0,1,2,1,0,0,0],
+  [1,1,1,1,2,1,2,1,1,1,1,1,2,1,2,1,1,1,1],
+  [1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,1],
+  [1,2,1,1,2,1,1,1,2,1,2,1,1,1,2,1,1,2,1],
+  [1,2,2,1,2,2,2,2,2,0,2,2,2,2,2,1,2,2,1],
+  [1,1,2,1,2,1,2,1,1,1,1,1,2,1,2,1,2,1,1],
+  [1,2,2,2,2,1,2,2,2,1,2,2,2,1,2,2,2,2,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
+
+// Fantasma Básico
+let ghostX = 190, ghostY = 170;
+let ghostDir = 3;
+
+function initPacman() {
+  pacCanvas = document.getElementById("pacmanCanvas");
+  pacCtx = pacCanvas.getContext("2d");
+
+  pacX = 190; pacY = 330;
+  ghostX = 190; ghostY = 170;
+  pacScore = 0;
+
+  if (pacAnimationFrame) cancelAnimationFrame(pacAnimationFrame);
+  drawPacman();
 }
 
-function drawPaddle() {
-  ctx.beginPath();
-  ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
-  ctx.fillStyle = "#39c2d7"; // Azul turquesa destacado
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = "#39c2d7";
-  ctx.fill();
-  ctx.closePath();
-  ctx.shadowBlur = 0;
+window.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") nextPacDir = 0;
+  if (e.key === "ArrowDown") nextPacDir = 1;
+  if (e.key === "ArrowLeft") nextPacDir = 2;
+  if (e.key === "ArrowUp") nextPacDir = 3;
+});
+
+// Suporte a Toque na Tela no Celular para Pac-Man (Swipe)
+let touchStartX = 0, touchStartY = 0;
+document.addEventListener("DOMContentLoaded", () => {
+  const pCanvas = document.getElementById("pacmanCanvas");
+  pCanvas.addEventListener("touchstart", (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  pCanvas.addEventListener("touchend", (e) => {
+    const diffX = e.changedTouches[0].clientX - touchStartX;
+    const diffY = e.changedTouches[0].clientY - touchStartY;
+
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      nextPacDir = diffX > 0 ? 0 : 2;
+    } else {
+      nextPacDir = diffY > 0 ? 1 : 3;
+    }
+  }, { passive: true });
+});
+
+function canMove(x, y, dir) {
+  let testX = x, testY = y;
+  if (dir === 0) testX += pacSpeed;
+  if (dir === 1) testY += pacSpeed;
+  if (dir === 2) testX -= pacSpeed;
+  if (dir === 3) testY -= pacSpeed;
+
+  const tileX1 = Math.floor((testX - 8) / tileSize);
+  const tileX2 = Math.floor((testX + 8) / tileSize);
+  const tileY1 = Math.floor((testY - 8) / tileSize);
+  const tileY2 = Math.floor((testY + 8) / tileSize);
+
+  if (map[tileY1] && map[tileY1][tileX1] === 1) return false;
+  if (map[tileY1] && map[tileY1][tileX2] === 1) return false;
+  if (map[tileY2] && map[tileY2][tileX1] === 1) return false;
+  if (map[tileY2] && map[tileY2][tileX2] === 1) return false;
+
+  return true;
 }
 
-function drawBricks() {
-  for (let c = 0; c < colCount; c++) {
-    for (let r = 0; r < rowCount; r++) {
-      if (bricks[c][r].status === 1) {
-        const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
-        const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
-        bricks[c][r].x = brickX;
-        bricks[c][r].y = brickY;
+function drawPacman() {
+  pacCtx.fillStyle = "#1a181e";
+  pacCtx.fillRect(0, 0, pacCanvas.width, pacCanvas.height);
 
-        ctx.beginPath();
-        ctx.rect(brickX, brickY, brickWidth, brickHeight);
-        ctx.fillStyle = bricks[c][r].color;
-        ctx.shadowBlur = 5;
-        ctx.shadowColor = bricks[c][r].color;
-        ctx.fill();
-        ctx.closePath();
-        ctx.shadowBlur = 0;
+  // Desenha o Mapa
+  for (let r = 0; r < map.length; r++) {
+    for (let c = 0; c < map[r].length; c++) {
+      if (map[r][c] === 1) {
+        pacCtx.fillStyle = "#39c2d7";
+        pacCtx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+      } else if (map[r][c] === 2) {
+        pacCtx.beginPath();
+        pacCtx.arc(c * tileSize + 10, r * tileSize + 10, 3, 0, Math.PI * 2);
+        pacCtx.fillStyle = "#f8c257";
+        pacCtx.fill();
+        pacCtx.closePath();
       }
     }
   }
-}
 
-function drawScore() {
-  ctx.font = "bold 14px sans-serif";
-  ctx.fillStyle = "#f2427a"; // Rosa chiclete no placar
-  ctx.textAlign = "left";
-  ctx.fillText("SCORE: " + score, 15, 25);
-}
-
-function draw() {
-  // Fundo num tom escuro quente (preto levemente acolhedor como na arte)
-  ctx.fillStyle = "#1a181e";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  drawBricks();
-  drawBall();
-  drawPaddle();
-  drawPowerups();
-  drawScore();
-  
-  collisionDetection();
-  updatePowerups();
-
-  if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) dx = -dx;
-  if (y + dy < ballRadius) dy = -dy;
-  else if (y + dy > canvas.height - ballRadius) {
-    if (x > paddleX && x < paddleX + paddleWidth) {
-      dy = -dy;
-    } else {
-      resetGame();
-    }
+  // Mudança de Direção do Pacman
+  if (canMove(pacX, pacY, nextPacDir)) pacDir = nextPacDir;
+  if (canMove(pacX, pacY, pacDir)) {
+    if (pacDir === 0) pacX += pacSpeed;
+    if (pacDir === 1) pacY += pacSpeed;
+    if (pacDir === 2) pacX -= pacSpeed;
+    if (pacDir === 3) pacY -= pacSpeed;
   }
 
-  if (rightPressed && paddleX < canvas.width - paddleWidth) paddleX += paddleSpeed;
-  else if (leftPressed && paddleX > 0) paddleX -= paddleSpeed;
+  // Coleta de Pontinhos
+  const currentTileC = Math.floor(pacX / tileSize);
+  const currentTileR = Math.floor(pacY / tileSize);
+  if (map[currentTileR] && map[currentTileR][currentTileC] === 2) {
+    map[currentTileR][currentTileC] = 0;
+    pacScore += 10;
+  }
 
-  x += dx;
-  y += dy;
-  requestAnimationFrame(draw);
+  // Desenha Pac-Man
+  pacCtx.beginPath();
+  pacCtx.arc(pacX, pacY, 8, 0.2 * Math.PI, 1.8 * Math.PI);
+  pacCtx.lineTo(pacX, pacY);
+  pacCtx.fillStyle = "#f8c257";
+  pacCtx.fill();
+  pacCtx.closePath();
+
+  // Movimento Fantasma Simples
+  if (canMove(ghostX, ghostY, ghostDir)) {
+    if (ghostDir === 0) ghostX += 1;
+    if (ghostDir === 1) ghostY += 1;
+    if (ghostDir === 2) ghostX -= 1;
+    if (ghostDir === 3) ghostY -= 1;
+  } else {
+    ghostDir = Math.floor(Math.random() * 4);
+  }
+
+  // Desenha Fantasma
+  pacCtx.beginPath();
+  pacCtx.arc(ghostX, ghostY, 8, 0, Math.PI * 2);
+  pacCtx.fillStyle = "#f2427a";
+  pacCtx.fill();
+  pacCtx.closePath();
+
+  // Placar Pacman
+  pacCtx.font = "bold 14px sans-serif";
+  pacCtx.fillStyle = "#ffffff";
+  pacCtx.fillText("PONTOS: " + pacScore, 10, pacCanvas.height - 10);
+
+  pacAnimationFrame = requestAnimationFrame(drawPacman);
 }
 
-draw();
+// Inicializa o primeiro jogo ao carregar a página
+window.onload = function() {
+  initBreakout();
+};
