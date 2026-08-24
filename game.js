@@ -1,8 +1,8 @@
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 
-// Foco automático para usar as setas imediatamente sem precisar clicar
-canvas.focus();
+// Garante foco na página
+window.focus();
 
 let x = canvas.width / 2;
 let y = canvas.height - 30;
@@ -11,15 +11,24 @@ let dx = baseSpeed;
 let dy = -baseSpeed;
 
 const ballRadius = 6;
+
+// Configurações padrão da plataforma
+const DEFAULT_PADDLE_WIDTH = 85;
+const DEFAULT_PADDLE_SPEED = 7;
+
 let paddleHeight = 12;
-let paddleWidth = 85;
+let paddleWidth = DEFAULT_PADDLE_WIDTH;
 let paddleX = (canvas.width - paddleWidth) / 2;
-let paddleSpeed = 7;
+let paddleSpeed = DEFAULT_PADDLE_SPEED;
+
+// Timers para os bônus
+let expandTimeout = null;
+let speedTimeout = null;
 
 let rightPressed = false;
 let leftPressed = false;
 
-// Configuração de Blocos (Menores e mais quantidade)
+// Configuração de Blocos
 const rowCount = 6;
 const colCount = 9;
 const brickWidth = 46;
@@ -28,16 +37,14 @@ const brickPadding = 6;
 const brickOffsetTop = 40;
 const brickOffsetLeft = 18;
 
-// Cores no estilo da imagem (Tetris/Neon)
 const rowColors = ["#ff2a75", "#ff7b00", "#ffea00", "#00e5ff", "#b537f2", "#ff0055"];
 
 let score = 0;
 let powerups = [];
 
-// Lista de tipos de bônus
 const POWERUP_TYPES = {
-  EXPAND: { color: "#00e5ff", label: "↔" }, // Aumenta a plataforma
-  SPEED: { color: "#ffea00", label: "⚡" }   // Aumenta velocidade do movimento
+  EXPAND: { color: "#00e5ff", label: "↔" },
+  SPEED: { color: "#ffea00", label: "⚡" }
 };
 
 const bricks = [];
@@ -48,21 +55,42 @@ for (let c = 0; c < colCount; c++) {
   }
 }
 
-document.addEventListener("keydown", (e) => {
+// Ouvintes de teclas na janela principal
+window.addEventListener("keydown", (e) => {
   if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
   if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
 });
 
-document.addEventListener("keyup", (e) => {
+window.addEventListener("keyup", (e) => {
   if (e.key === "Right" || e.key === "ArrowRight") rightPressed = false;
   if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = false;
 });
 
 function spawnPowerup(x, y) {
-  // 25% de chance de soltar um power-up
-  if (Math.random() < 0.25) {
+  if (Math.random() < 0.3) {
     const type = Math.random() > 0.5 ? POWERUP_TYPES.EXPAND : POWERUP_TYPES.SPEED;
     powerups.push({ x: x + brickWidth / 2, y: y, type: type, radius: 8 });
+  }
+}
+
+function applyPowerup(type) {
+  if (type === POWERUP_TYPES.EXPAND) {
+    paddleWidth = 140;
+    
+    if (expandTimeout) clearTimeout(expandTimeout);
+    
+    expandTimeout = setTimeout(() => {
+      paddleWidth = DEFAULT_PADDLE_WIDTH; // Volta ao tamanho original após 6s
+    }, 6000);
+  } 
+  else if (type === POWERUP_TYPES.SPEED) {
+    paddleSpeed = 12;
+    
+    if (speedTimeout) clearTimeout(speedTimeout);
+    
+    speedTimeout = setTimeout(() => {
+      paddleSpeed = DEFAULT_PADDLE_SPEED; // Volta à velocidade original após 6s
+    }, 6000);
   }
 }
 
@@ -71,18 +99,12 @@ function updatePowerups() {
     let p = powerups[i];
     p.y += 2;
 
-    // Colisão com a plataforma
     if (p.y + p.radius >= canvas.height - paddleHeight && p.x >= paddleX && p.x <= paddleX + paddleWidth) {
-      if (p.type === POWERUP_TYPES.EXPAND) {
-        paddleWidth = Math.min(paddleWidth + 25, 160);
-      } else if (p.type === POWERUP_TYPES.SPEED) {
-        paddleSpeed += 2;
-      }
+      applyPowerup(p.type);
       powerups.splice(i, 1);
       continue;
     }
 
-    // Remove se cair fora da tela
     if (p.y > canvas.height) {
       powerups.splice(i, 1);
     }
@@ -104,7 +126,7 @@ function drawPowerups() {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(p.type.label, p.x, p.y);
-    ctx.shadowBlur = 0; // Reseta sombra
+    ctx.shadowBlur = 0;
   });
 }
 
@@ -142,7 +164,7 @@ function drawBall() {
 
 function drawPaddle() {
   ctx.beginPath();
-  ctx.roundRect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight, 6);
+  ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
   ctx.fillStyle = "#00e5ff";
   ctx.shadowBlur = 12;
   ctx.shadowColor = "#00e5ff";
@@ -161,7 +183,7 @@ function drawBricks() {
         bricks[c][r].y = brickY;
 
         ctx.beginPath();
-        ctx.roundRect(brickX, brickY, brickWidth, brickHeight, 3);
+        ctx.rect(brickX, brickY, brickWidth, brickHeight);
         ctx.fillStyle = bricks[c][r].color;
         ctx.shadowBlur = 6;
         ctx.shadowColor = bricks[c][r].color;
