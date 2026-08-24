@@ -54,21 +54,22 @@ window.addEventListener("keyup", (e) => {
 
 document.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("myCanvas");
-  canvas.addEventListener("touchmove", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const touchX = e.touches[0].clientX - rect.left;
-    paddleX = touchX - paddleWidth / 2;
-    if (paddleX < 0) paddleX = 0;
-    if (paddleX > canvas.width - paddleWidth) paddleX = canvas.width - paddleWidth;
-    e.preventDefault();
-  }, { passive: false });
+  if (canvas) {
+    canvas.addEventListener("touchmove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const touchX = e.touches[0].clientX - rect.left;
+      paddleX = touchX - paddleWidth / 2;
+      if (paddleX < 0) paddleX = 0;
+      if (paddleX > canvas.width - paddleWidth) paddleX = canvas.width - paddleWidth;
+      e.preventDefault();
+    }, { passive: false });
+  }
 });
 
 function drawBreakout() {
   breakoutCtx.fillStyle = "#1a181e";
   breakoutCtx.fillRect(0, 0, breakoutCanvas.width, breakoutCanvas.height);
 
-  // Desenhar Blocos
   for (let c = 0; c < colCount; c++) {
     for (let r = 0; r < rowCount; r++) {
       if (bricks[c][r].status === 1) {
@@ -84,26 +85,22 @@ function drawBreakout() {
     }
   }
 
-  // Bola
   breakoutCtx.beginPath();
   breakoutCtx.arc(bX, bY, ballRadius, 0, Math.PI * 2);
   breakoutCtx.fillStyle = "#ffffff";
   breakoutCtx.fill();
   breakoutCtx.closePath();
 
-  // Raquete
   breakoutCtx.beginPath();
   breakoutCtx.rect(paddleX, breakoutCanvas.height - paddleHeight, paddleWidth, paddleHeight);
   breakoutCtx.fillStyle = "#39c2d7";
   breakoutCtx.fill();
   breakoutCtx.closePath();
 
-  // Placar
   breakoutCtx.font = "bold 14px sans-serif";
   breakoutCtx.fillStyle = "#f2427a";
   breakoutCtx.fillText("SCORE: " + breakoutScore, 15, 25);
 
-  // Colisões
   for (let c = 0; c < colCount; c++) {
     for (let r = 0; r < rowCount; r++) {
       const b = bricks[c][r];
@@ -139,14 +136,15 @@ function drawBreakout() {
    2. JOGO DO PAC-MAN
    ========================================================= */
 let pacCanvas, pacCtx;
-let pacX = 190, pacY = 210;
+let pacX, pacY;
 let pacDir = 0, nextPacDir = 0; // 0: Direita, 1: Baixo, 2: Esquerda, 3: Cima
 let pacSpeed = 2;
 let pacScore = 0;
 let pacAnimationFrame;
 
 const tileSize = 20;
-// 0: Vazio, 1: Parede, 2: Ponto
+
+// Mapa do Pacman
 const map = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
   [1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,1],
@@ -170,17 +168,31 @@ const map = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
-// Fantasma Básico
-let ghostX = 190, ghostY = 170;
-let ghostDir = 3;
+// Configuração dos 4 Fantasmas
+let ghosts = [
+  { x: 190, y: 170, color: "#ff0000", dir: 0 }, // Blinky (Vermelho)
+  { x: 170, y: 190, color: "#ffb8ff", dir: 1 }, // Pinky (Rosa)
+  { x: 190, y: 190, color: "#00ffff", dir: 2 }, // Inky (Ciano)
+  { x: 210, y: 190, color: "#ffb852", dir: 3 }  // Clyde (Laranja)
+];
 
 function initPacman() {
   pacCanvas = document.getElementById("pacmanCanvas");
   pacCtx = pacCanvas.getContext("2d");
 
-  pacX = 190; pacY = 330;
-  ghostX = 190; ghostY = 170;
+  // Posiciona Pac-Man alinhado perfeitamente no centro de um piso (Tile)
+  pacX = 9 * tileSize + 10;
+  pacY = 16 * tileSize + 10;
+  pacDir = 0;
+  nextPacDir = 0;
   pacScore = 0;
+
+  ghosts = [
+    { x: 9 * tileSize + 10, y: 8 * tileSize + 10, color: "#ff0000", dir: 0 },
+    { x: 8 * tileSize + 10, y: 9 * tileSize + 10, color: "#ffb8ff", dir: 1 },
+    { x: 9 * tileSize + 10, y: 9 * tileSize + 10, color: "#00ffff", dir: 2 },
+    { x: 10 * tileSize + 10, y: 9 * tileSize + 10, color: "#ffb852", dir: 3 }
+  ];
 
   if (pacAnimationFrame) cancelAnimationFrame(pacAnimationFrame);
   drawPacman();
@@ -193,44 +205,53 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowUp") nextPacDir = 3;
 });
 
-// Suporte a Toque na Tela no Celular para Pac-Man (Swipe)
+// Suporte ao Touch no Celular (Swipe)
 let touchStartX = 0, touchStartY = 0;
 document.addEventListener("DOMContentLoaded", () => {
   const pCanvas = document.getElementById("pacmanCanvas");
-  pCanvas.addEventListener("touchstart", (e) => {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-  }, { passive: true });
+  if (pCanvas) {
+    pCanvas.addEventListener("touchstart", (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
 
-  pCanvas.addEventListener("touchend", (e) => {
-    const diffX = e.changedTouches[0].clientX - touchStartX;
-    const diffY = e.changedTouches[0].clientY - touchStartY;
+    pCanvas.addEventListener("touchend", (e) => {
+      const diffX = e.changedTouches[0].clientX - touchStartX;
+      const diffY = e.changedTouches[0].clientY - touchStartY;
 
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-      nextPacDir = diffX > 0 ? 0 : 2;
-    } else {
-      nextPacDir = diffY > 0 ? 1 : 3;
-    }
-  }, { passive: true });
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        nextPacDir = diffX > 0 ? 0 : 2;
+      } else {
+        nextPacDir = diffY > 0 ? 1 : 3;
+      }
+    }, { passive: true });
+  }
 });
 
-function canMove(x, y, dir) {
-  let testX = x, testY = y;
-  if (dir === 0) testX += pacSpeed;
-  if (dir === 1) testY += pacSpeed;
-  if (dir === 2) testX -= pacSpeed;
-  if (dir === 3) testY -= pacSpeed;
+// Checa colisão com paredes do mapa
+function canMoveTile(posX, posY, dir) {
+  let speed = pacSpeed;
+  let newX = posX;
+  let newY = posY;
 
-  const tileX1 = Math.floor((testX - 8) / tileSize);
-  const tileX2 = Math.floor((testX + 8) / tileSize);
-  const tileY1 = Math.floor((testY - 8) / tileSize);
-  const tileY2 = Math.floor((testY + 8) / tileSize);
+  if (dir === 0) newX += speed;
+  if (dir === 1) newY += speed;
+  if (dir === 2) newX -= speed;
+  if (dir === 3) newY -= speed;
 
-  if (map[tileY1] && map[tileY1][tileX1] === 1) return false;
-  if (map[tileY1] && map[tileY1][tileX2] === 1) return false;
-  if (map[tileY2] && map[tileY2][tileX1] === 1) return false;
-  if (map[tileY2] && map[tileY2][tileX2] === 1) return false;
+  const r = 7; // Raio de colisão interno
+  const points = [
+    { x: newX - r, y: newY - r },
+    { x: newX + r, y: newY - r },
+    { x: newX - r, y: newY + r },
+    { x: newX + r, y: newY + r }
+  ];
 
+  for (let pt of points) {
+    let c = Math.floor(pt.x / tileSize);
+    let r = Math.floor(pt.y / tileSize);
+    if (map[r] && map[r][c] === 1) return false;
+  }
   return true;
 }
 
@@ -238,7 +259,7 @@ function drawPacman() {
   pacCtx.fillStyle = "#1a181e";
   pacCtx.fillRect(0, 0, pacCanvas.width, pacCanvas.height);
 
-  // Desenha o Mapa
+  // Desenhar Mapa
   for (let r = 0; r < map.length; r++) {
     for (let c = 0; c < map[r].length; c++) {
       if (map[r][c] === 1) {
@@ -254,9 +275,22 @@ function drawPacman() {
     }
   }
 
-  // Mudança de Direção do Pacman
-  if (canMove(pacX, pacY, nextPacDir)) pacDir = nextPacDir;
-  if (canMove(pacX, pacY, pacDir)) {
+  // Tenta virar na direção desejada com ajuste automático no centro do Tile
+  if (canMoveTile(pacX, pacY, nextPacDir)) {
+    if (nextPacDir === 0 || nextPacDir === 2) {
+      let tileY = Math.floor(pacY / tileSize) * tileSize + 10;
+      if (Math.abs(pacY - tileY) < 6) pacY = tileY; // Alinha Y
+    } else if (nextPacDir === 1 || nextPacDir === 3) {
+      let tileX = Math.floor(pacX / tileSize) * tileSize + 10;
+      if (Math.abs(pacX - tileX) < 6) pacX = tileX; // Alinha X
+    }
+    if (canMoveTile(pacX, pacY, nextPacDir)) {
+      pacDir = nextPacDir;
+    }
+  }
+
+  // Aplica o movimento na direção atual
+  if (canMoveTile(pacX, pacY, pacDir)) {
     if (pacDir === 0) pacX += pacSpeed;
     if (pacDir === 1) pacY += pacSpeed;
     if (pacDir === 2) pacX -= pacSpeed;
@@ -271,30 +305,54 @@ function drawPacman() {
     pacScore += 10;
   }
 
-  // Desenha Pac-Man
+  // Desenhar Pac-Man
   pacCtx.beginPath();
-  pacCtx.arc(pacX, pacY, 8, 0.2 * Math.PI, 1.8 * Math.PI);
+  let startAngle = 0.2 * Math.PI + (pacDir * 0.5 * Math.PI);
+  let endAngle = 1.8 * Math.PI + (pacDir * 0.5 * Math.PI);
+  pacCtx.arc(pacX, pacY, 8, startAngle, endAngle);
   pacCtx.lineTo(pacX, pacY);
   pacCtx.fillStyle = "#f8c257";
   pacCtx.fill();
   pacCtx.closePath();
 
-  // Movimento Fantasma Simples
-  if (canMove(ghostX, ghostY, ghostDir)) {
-    if (ghostDir === 0) ghostX += 1;
-    if (ghostDir === 1) ghostY += 1;
-    if (ghostDir === 2) ghostX -= 1;
-    if (ghostDir === 3) ghostY -= 1;
-  } else {
-    ghostDir = Math.floor(Math.random() * 4);
-  }
+  // Desenhar Fantasmas
+  ghosts.forEach(ghost => {
+    if (canMoveTile(ghost.x, ghost.y, ghost.dir)) {
+      if (ghost.dir === 0) ghost.x += 1;
+      if (ghost.dir === 1) ghost.y += 1;
+      if (ghost.dir === 2) ghost.x -= 1;
+      if (ghost.dir === 3) ghost.y -= 1;
+    } else {
+      // Muda de direção ao bater na parede
+      let possibleDirs = [0, 1, 2, 3].filter(d => canMoveTile(ghost.x, ghost.y, d));
+      if (possibleDirs.length > 0) {
+        ghost.dir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
+      }
+    }
 
-  // Desenha Fantasma
-  pacCtx.beginPath();
-  pacCtx.arc(ghostX, ghostY, 8, 0, Math.PI * 2);
-  pacCtx.fillStyle = "#f2427a";
-  pacCtx.fill();
-  pacCtx.closePath();
+    // Corpo do Fantasma
+    pacCtx.beginPath();
+    pacCtx.arc(ghost.x, ghost.y - 1, 8, Math.PI, 0, false);
+    pacCtx.rect(ghost.x - 8, ghost.y - 1, 16, 8);
+    pacCtx.fillStyle = ghost.color;
+    pacCtx.fill();
+    pacCtx.closePath();
+
+    // Olhos do Fantasma
+    pacCtx.beginPath();
+    pacCtx.arc(ghost.x - 3, ghost.y - 2, 2.5, 0, Math.PI * 2);
+    pacCtx.arc(ghost.x + 3, ghost.y - 2, 2.5, 0, Math.PI * 2);
+    pacCtx.fillStyle = "#ffffff";
+    pacCtx.fill();
+    pacCtx.closePath();
+
+    // Colisão com Pac-Man (Reset)
+    let dist = Math.hypot(pacX - ghost.x, pacY - ghost.y);
+    if (dist < 12) {
+      initPacman();
+      return;
+    }
+  });
 
   // Placar Pacman
   pacCtx.font = "bold 14px sans-serif";
@@ -304,7 +362,6 @@ function drawPacman() {
   pacAnimationFrame = requestAnimationFrame(drawPacman);
 }
 
-// Inicializa o primeiro jogo ao carregar a página
 window.onload = function() {
   initBreakout();
 };
