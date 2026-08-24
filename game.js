@@ -21,7 +21,7 @@ let paddleWidth = DEFAULT_PADDLE_WIDTH;
 let paddleX = (canvas.width - paddleWidth) / 2;
 let paddleSpeed = DEFAULT_PADDLE_SPEED;
 
-// Controle dos bônus de 6 segundos
+// Controle dos bônus
 let expandTimeout = null;
 let speedTimeout = null;
 
@@ -56,7 +56,7 @@ for (let c = 0; c < colCount; c++) {
   }
 }
 
-// Ouvintes globais do teclado
+// Eventos de teclado
 window.addEventListener("keydown", (e) => {
   if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
   if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
@@ -77,20 +77,15 @@ function spawnPowerup(x, y) {
 function applyPowerup(type) {
   if (type === POWERUP_TYPES.EXPAND) {
     paddleWidth = 140;
-    
     if (expandTimeout) clearTimeout(expandTimeout);
-    
     expandTimeout = setTimeout(() => {
-      paddleWidth = DEFAULT_PADDLE_WIDTH; // Reseta tamanho após 6s
+      paddleWidth = DEFAULT_PADDLE_WIDTH;
     }, 6000);
-  } 
-  else if (type === POWERUP_TYPES.SPEED) {
+  } else if (type === POWERUP_TYPES.SPEED) {
     paddleSpeed = 12;
-    
     if (speedTimeout) clearTimeout(speedTimeout);
-    
     speedTimeout = setTimeout(() => {
-      paddleSpeed = DEFAULT_PADDLE_SPEED; // Reseta velocidade após 6s
+      paddleSpeed = DEFAULT_PADDLE_SPEED;
     }, 6000);
   }
 }
