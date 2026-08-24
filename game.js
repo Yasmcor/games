@@ -1,7 +1,7 @@
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 
-// Garante o foco para as teclas responderem de imediato
+// Garante foco na janela
 window.focus();
 
 let x = canvas.width / 2;
@@ -12,7 +12,7 @@ let dy = -baseSpeed;
 
 const ballRadius = 6;
 
-// Configurações padrão
+// Configurações da plataforma
 const DEFAULT_PADDLE_WIDTH = 85;
 const DEFAULT_PADDLE_SPEED = 7;
 
@@ -21,7 +21,6 @@ let paddleWidth = DEFAULT_PADDLE_WIDTH;
 let paddleX = (canvas.width - paddleWidth) / 2;
 let paddleSpeed = DEFAULT_PADDLE_SPEED;
 
-// Controle dos bônus
 let expandTimeout = null;
 let speedTimeout = null;
 
@@ -56,7 +55,7 @@ for (let c = 0; c < colCount; c++) {
   }
 }
 
-// Eventos de teclado
+// Eventos de Teclado
 window.addEventListener("keydown", (e) => {
   if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
   if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
