@@ -1,7 +1,7 @@
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 
-// Garante foco na página para capturar o teclado
+// Garante o foco para as teclas responderem de imediato
 window.focus();
 
 let x = canvas.width / 2;
@@ -21,7 +21,7 @@ let paddleWidth = DEFAULT_PADDLE_WIDTH;
 let paddleX = (canvas.width - paddleWidth) / 2;
 let paddleSpeed = DEFAULT_PADDLE_SPEED;
 
-// Controle dos bônus
+// Controle dos bônus de 6 segundos
 let expandTimeout = null;
 let speedTimeout = null;
 
@@ -81,7 +81,7 @@ function applyPowerup(type) {
     if (expandTimeout) clearTimeout(expandTimeout);
     
     expandTimeout = setTimeout(() => {
-      paddleWidth = DEFAULT_PADDLE_WIDTH; // Volta ao normal em 6s
+      paddleWidth = DEFAULT_PADDLE_WIDTH; // Reseta tamanho após 6s
     }, 6000);
   } 
   else if (type === POWERUP_TYPES.SPEED) {
@@ -90,7 +90,7 @@ function applyPowerup(type) {
     if (speedTimeout) clearTimeout(speedTimeout);
     
     speedTimeout = setTimeout(() => {
-      paddleSpeed = DEFAULT_PADDLE_SPEED; // Volta ao normal em 6s
+      paddleSpeed = DEFAULT_PADDLE_SPEED; // Reseta velocidade após 6s
     }, 6000);
   }
 }
@@ -143,8 +143,12 @@ function collisionDetection() {
           spawnPowerup(b.x, b.y);
 
           if (score === rowCount * colCount * 10) {
-            alert("Parabéns, você venceu!");
-            window.location.reload();
+            isGameOver = true;
+            ctx.font = "bold 24px sans-serif";
+            ctx.fillStyle = "#00e5ff";
+            ctx.textAlign = "center";
+            ctx.fillText("VOCÊ VENCEU!", canvas.width / 2, canvas.height / 2);
+            setTimeout(() => { window.location.reload(); }, 1500);
           }
         }
       }
@@ -234,7 +238,7 @@ function draw() {
       drawGameOver();
       setTimeout(() => {
         window.location.reload();
-      }, 1200);
+      }, 1000);
       return;
     }
   }
