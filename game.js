@@ -1,6 +1,5 @@
-/* =========================================================
-   1. JOGO DE BLOCOS (BREAKOUT)
-   ========================================================= */
+/* 1. JOGO DE BLOCOS (BREAKOUT)*/
+
 let breakoutCanvas, breakoutCtx;
 let bX, bY, bDx, bDy;
 const ballRadius = 6;
@@ -132,9 +131,7 @@ function drawBreakout() {
   breakoutAnimationFrame = requestAnimationFrame(drawBreakout);
 }
 
-/* =========================================================
-   2. JOGO DO PAC-MAN
-   ========================================================= */
+/* 2. JOGO DO PAC-MAN*/
 let pacCanvas, pacCtx;
 let pacX, pacY;
 let pacDir = 0, nextPacDir = 0;
