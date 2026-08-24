@@ -1,33 +1,12 @@
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 
-// Garante foco na janela
 window.focus();
 
-let x = canvas.width / 2;
-let y = canvas.height - 30;
-let baseSpeed = 3;
-let dx = baseSpeed;
-let dy = -baseSpeed;
-
+// Constantes de configuração
 const ballRadius = 6;
-
-// Configurações da plataforma
 const DEFAULT_PADDLE_WIDTH = 85;
 const DEFAULT_PADDLE_SPEED = 7;
-
-let paddleHeight = 12;
-let paddleWidth = DEFAULT_PADDLE_WIDTH;
-let paddleX = (canvas.width - paddleWidth) / 2;
-let paddleSpeed = DEFAULT_PADDLE_SPEED;
-
-let expandTimeout = null;
-let speedTimeout = null;
-
-let rightPressed = false;
-let leftPressed = false;
-
-// Configuração de Blocos
 const rowCount = 6;
 const colCount = 9;
 const brickWidth = 46;
@@ -35,27 +14,53 @@ const brickHeight = 14;
 const brickPadding = 6;
 const brickOffsetTop = 40;
 const brickOffsetLeft = 18;
-
 const rowColors = ["#ff2a75", "#ff7b00", "#ffea00", "#00e5ff", "#b537f2", "#ff0055"];
-
-let score = 0;
-let powerups = [];
-let isGameOver = false;
 
 const POWERUP_TYPES = {
   EXPAND: { color: "#00e5ff", label: "↔" },
   SPEED: { color: "#ffea00", label: "⚡" }
 };
 
-const bricks = [];
-for (let c = 0; c < colCount; c++) {
-  bricks[c] = [];
-  for (let r = 0; r < rowCount; r++) {
-    bricks[c][r] = { x: 0, y: 0, status: 1, color: rowColors[r % rowColors.length] };
+// Variáveis de estado do jogo
+let x, y, dx, dy;
+let paddleHeight = 12;
+let paddleWidth, paddleX, paddleSpeed;
+let rightPressed = false;
+let leftPressed = false;
+let expandTimeout = null;
+let speedTimeout = null;
+let score = 0;
+let powerups = [];
+let bricks = [];
+let isGameOver = false;
+
+// Função para iniciar ou reiniciar o jogo sem recarregar a página
+function initGame() {
+  x = canvas.width / 2;
+  y = canvas.height - 30;
+  dx = 3;
+  dy = -3;
+  
+  paddleWidth = DEFAULT_PADDLE_WIDTH;
+  paddleX = (canvas.width - paddleWidth) / 2;
+  paddleSpeed = DEFAULT_PADDLE_SPEED;
+  
+  score = 0;
+  powerups = [];
+  isGameOver = false;
+
+  if (expandTimeout) clearTimeout(expandTimeout);
+  if (speedTimeout) clearTimeout(speedTimeout);
+
+  for (let c = 0; c < colCount; c++) {
+    bricks[c] = [];
+    for (let r = 0; r < rowCount; r++) {
+      bricks[c][r] = { x: 0, y: 0, status: 1, color: rowColors[r % rowColors.length] };
+    }
   }
 }
 
-// Eventos de Teclado
+// Ouvintes de teclado
 window.addEventListener("keydown", (e) => {
   if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
   if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
@@ -66,10 +71,10 @@ window.addEventListener("keyup", (e) => {
   if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = false;
 });
 
-function spawnPowerup(x, y) {
+function spawnPowerup(bx, by) {
   if (Math.random() < 0.3) {
     const type = Math.random() > 0.5 ? POWERUP_TYPES.EXPAND : POWERUP_TYPES.SPEED;
-    powerups.push({ x: x + brickWidth / 2, y: y, type: type, radius: 8 });
+    powerups.push({ x: bx + brickWidth / 2, y: by, type: type, radius: 8 });
   }
 }
 
@@ -77,15 +82,11 @@ function applyPowerup(type) {
   if (type === POWERUP_TYPES.EXPAND) {
     paddleWidth = 140;
     if (expandTimeout) clearTimeout(expandTimeout);
-    expandTimeout = setTimeout(() => {
-      paddleWidth = DEFAULT_PADDLE_WIDTH;
-    }, 6000);
+    expandTimeout = setTimeout(() => { paddleWidth = DEFAULT_PADDLE_WIDTH; }, 6000);
   } else if (type === POWERUP_TYPES.SPEED) {
     paddleSpeed = 12;
     if (speedTimeout) clearTimeout(speedTimeout);
-    speedTimeout = setTimeout(() => {
-      paddleSpeed = DEFAULT_PADDLE_SPEED;
-    }, 6000);
+    speedTimeout = setTimeout(() => { paddleSpeed = DEFAULT_PADDLE_SPEED; }, 6000);
   }
 }
 
@@ -112,8 +113,6 @@ function drawPowerups() {
     ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
     ctx.fillStyle = p.type.color;
     ctx.fill();
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = p.type.color;
     ctx.closePath();
 
     ctx.fillStyle = "#000";
@@ -121,7 +120,6 @@ function drawPowerups() {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(p.type.label, p.x, p.y);
-    ctx.shadowBlur = 0;
   });
 }
 
@@ -137,12 +135,7 @@ function collisionDetection() {
           spawnPowerup(b.x, b.y);
 
           if (score === rowCount * colCount * 10) {
-            isGameOver = true;
-            ctx.font = "bold 24px sans-serif";
-            ctx.fillStyle = "#00e5ff";
-            ctx.textAlign = "center";
-            ctx.fillText("VOCÊ VENCEU!", canvas.width / 2, canvas.height / 2);
-            setTimeout(() => { window.location.reload(); }, 1500);
+            handleGameOver("VOCÊ VENCEU!");
           }
         }
       }
@@ -154,22 +147,16 @@ function drawBall() {
   ctx.beginPath();
   ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
   ctx.fillStyle = "#ffffff";
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = "#ffffff";
   ctx.fill();
   ctx.closePath();
-  ctx.shadowBlur = 0;
 }
 
 function drawPaddle() {
   ctx.beginPath();
   ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
   ctx.fillStyle = "#00e5ff";
-  ctx.shadowBlur = 12;
-  ctx.shadowColor = "#00e5ff";
   ctx.fill();
   ctx.closePath();
-  ctx.shadowBlur = 0;
 }
 
 function drawBricks() {
@@ -184,11 +171,8 @@ function drawBricks() {
         ctx.beginPath();
         ctx.rect(brickX, brickY, brickWidth, brickHeight);
         ctx.fillStyle = bricks[c][r].color;
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = bricks[c][r].color;
         ctx.fill();
         ctx.closePath();
-        ctx.shadowBlur = 0;
       }
     }
   }
@@ -201,11 +185,21 @@ function drawScore() {
   ctx.fillText("SCORE: " + score, 15, 25);
 }
 
-function drawGameOver() {
+function handleGameOver(message) {
+  isGameOver = true;
+  ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
   ctx.font = "bold 24px sans-serif";
   ctx.fillStyle = "#ff2a75";
   ctx.textAlign = "center";
-  ctx.fillText("FIM DE JOGO", canvas.width / 2, canvas.height / 2);
+  ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+
+  // Reinicia o jogo internamente após 1.5s sem dar reload na página
+  setTimeout(() => {
+    initGame();
+    draw();
+  }, 1500);
 }
 
 function draw() {
@@ -228,11 +222,7 @@ function draw() {
     if (x > paddleX && x < paddleX + paddleWidth) {
       dy = -dy;
     } else {
-      isGameOver = true;
-      drawGameOver();
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      handleGameOver("FIM DE JOGO");
       return;
     }
   }
@@ -245,4 +235,6 @@ function draw() {
   requestAnimationFrame(draw);
 }
 
+// Inicia o jogo na primeira execução
+initGame();
 draw();
