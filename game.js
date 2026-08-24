@@ -1,7 +1,7 @@
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 
-// Garante foco imediato na janela para capturar as teclas sem precisar clicar
+// Garante foco imediato na janela
 window.focus();
 
 let x = canvas.width / 2;
@@ -37,14 +37,22 @@ const brickPadding = 6;
 const brickOffsetTop = 40;
 const brickOffsetLeft = 18;
 
-const rowColors = ["#ff2a75", "#ff7b00", "#ffea00", "#00e5ff", "#b537f2", "#ff0055"];
+// Paleta inspirada na imagem (tons pastel / pixel art retrô)
+const rowColors = [
+  "#f2427a", // Rosa Chiclete
+  "#fa7268", // Salmão / Coral
+  "#f8c257", // Amarelo Pastel
+  "#39c2d7", // Azul Turquesa
+  "#9b51e0", // Roxo / Lilás
+  "#2ad2a0"  // Verde Água
+];
 
 let score = 0;
 let powerups = [];
 
 const POWERUP_TYPES = {
-  EXPAND: { color: "#00e5ff", label: "↔" },
-  SPEED: { color: "#ffea00", label: "⚡" }
+  EXPAND: { color: "#39c2d7", label: "↔" },
+  SPEED: { color: "#f8c257", label: "⚡" }
 };
 
 let bricks = [];
@@ -60,7 +68,7 @@ function initBricks() {
 
 initBricks();
 
-// Eventos escutando direto na janela (window) para capturar teclas imediatamente
+// Eventos de teclado
 window.addEventListener("keydown", (e) => {
   if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
   if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
@@ -80,16 +88,16 @@ function spawnPowerup(x, y) {
 
 function applyPowerup(type) {
   if (type === POWERUP_TYPES.EXPAND) {
-    paddleWidth = 140; // Aumenta a largura
+    paddleWidth = 140;
     if (expandTimeout) clearTimeout(expandTimeout);
     expandTimeout = setTimeout(() => {
-      paddleWidth = DEFAULT_PADDLE_WIDTH; // Voltar ao normal após 6s
+      paddleWidth = DEFAULT_PADDLE_WIDTH;
     }, 6000);
   } else if (type === POWERUP_TYPES.SPEED) {
-    paddleSpeed = 12; // Aumenta a velocidade do movimento
+    paddleSpeed = 12;
     if (speedTimeout) clearTimeout(speedTimeout);
     speedTimeout = setTimeout(() => {
-      paddleSpeed = DEFAULT_PADDLE_SPEED; // Voltar ao normal após 6s
+      paddleSpeed = DEFAULT_PADDLE_SPEED;
     }, 6000);
   }
 }
@@ -99,7 +107,6 @@ function updatePowerups() {
     let p = powerups[i];
     p.y += 2;
 
-    // Colisão do bônus com a plataforma
     if (p.y + p.radius >= canvas.height - paddleHeight && p.x >= paddleX && p.x <= paddleX + paddleWidth) {
       applyPowerup(p.type);
       powerups.splice(i, 1);
@@ -118,11 +125,11 @@ function drawPowerups() {
     ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
     ctx.fillStyle = p.type.color;
     ctx.fill();
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 8;
     ctx.shadowColor = p.type.color;
     ctx.closePath();
 
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = "#1e1e24";
     ctx.font = "bold 10px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -168,7 +175,7 @@ function drawBall() {
   ctx.beginPath();
   ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
   ctx.fillStyle = "#ffffff";
-  ctx.shadowBlur = 10;
+  ctx.shadowBlur = 8;
   ctx.shadowColor = "#ffffff";
   ctx.fill();
   ctx.closePath();
@@ -178,9 +185,9 @@ function drawBall() {
 function drawPaddle() {
   ctx.beginPath();
   ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
-  ctx.fillStyle = "#00e5ff";
-  ctx.shadowBlur = 12;
-  ctx.shadowColor = "#00e5ff";
+  ctx.fillStyle = "#39c2d7"; // Azul turquesa destacado
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = "#39c2d7";
   ctx.fill();
   ctx.closePath();
   ctx.shadowBlur = 0;
@@ -198,7 +205,7 @@ function drawBricks() {
         ctx.beginPath();
         ctx.rect(brickX, brickY, brickWidth, brickHeight);
         ctx.fillStyle = bricks[c][r].color;
-        ctx.shadowBlur = 6;
+        ctx.shadowBlur = 5;
         ctx.shadowColor = bricks[c][r].color;
         ctx.fill();
         ctx.closePath();
@@ -210,14 +217,16 @@ function drawBricks() {
 
 function drawScore() {
   ctx.font = "bold 14px sans-serif";
-  ctx.fillStyle = "#ff2a75";
+  ctx.fillStyle = "#f2427a"; // Rosa chiclete no placar
   ctx.textAlign = "left";
   ctx.fillText("SCORE: " + score, 15, 25);
 }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
+  // Fundo num tom escuro quente (preto levemente acolhedor como na arte)
+  ctx.fillStyle = "#1a181e";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
   drawBricks();
   drawBall();
   drawPaddle();
