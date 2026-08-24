@@ -1,7 +1,7 @@
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 
-// Garante foco na página
+// Garante foco na página para capturar o teclado
 window.focus();
 
 let x = canvas.width / 2;
@@ -12,7 +12,7 @@ let dy = -baseSpeed;
 
 const ballRadius = 6;
 
-// Configurações padrão da plataforma
+// Configurações padrão
 const DEFAULT_PADDLE_WIDTH = 85;
 const DEFAULT_PADDLE_SPEED = 7;
 
@@ -21,7 +21,7 @@ let paddleWidth = DEFAULT_PADDLE_WIDTH;
 let paddleX = (canvas.width - paddleWidth) / 2;
 let paddleSpeed = DEFAULT_PADDLE_SPEED;
 
-// Timers para os bônus
+// Controle dos bônus
 let expandTimeout = null;
 let speedTimeout = null;
 
@@ -41,6 +41,7 @@ const rowColors = ["#ff2a75", "#ff7b00", "#ffea00", "#00e5ff", "#b537f2", "#ff00
 
 let score = 0;
 let powerups = [];
+let isGameOver = false;
 
 const POWERUP_TYPES = {
   EXPAND: { color: "#00e5ff", label: "↔" },
@@ -55,7 +56,7 @@ for (let c = 0; c < colCount; c++) {
   }
 }
 
-// Ouvintes de teclas na janela principal
+// Ouvintes globais do teclado
 window.addEventListener("keydown", (e) => {
   if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
   if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
@@ -80,7 +81,7 @@ function applyPowerup(type) {
     if (expandTimeout) clearTimeout(expandTimeout);
     
     expandTimeout = setTimeout(() => {
-      paddleWidth = DEFAULT_PADDLE_WIDTH; // Volta ao tamanho original após 6s
+      paddleWidth = DEFAULT_PADDLE_WIDTH; // Volta ao normal em 6s
     }, 6000);
   } 
   else if (type === POWERUP_TYPES.SPEED) {
@@ -89,7 +90,7 @@ function applyPowerup(type) {
     if (speedTimeout) clearTimeout(speedTimeout);
     
     speedTimeout = setTimeout(() => {
-      paddleSpeed = DEFAULT_PADDLE_SPEED; // Volta à velocidade original após 6s
+      paddleSpeed = DEFAULT_PADDLE_SPEED; // Volta ao normal em 6s
     }, 6000);
   }
 }
@@ -143,7 +144,7 @@ function collisionDetection() {
 
           if (score === rowCount * colCount * 10) {
             alert("Parabéns, você venceu!");
-            document.location.reload();
+            window.location.reload();
           }
         }
       }
@@ -202,7 +203,16 @@ function drawScore() {
   ctx.fillText("SCORE: " + score, 15, 25);
 }
 
+function drawGameOver() {
+  ctx.font = "bold 24px sans-serif";
+  ctx.fillStyle = "#ff2a75";
+  ctx.textAlign = "center";
+  ctx.fillText("FIM DE JOGO", canvas.width / 2, canvas.height / 2);
+}
+
 function draw() {
+  if (isGameOver) return;
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
   drawBricks();
@@ -220,8 +230,11 @@ function draw() {
     if (x > paddleX && x < paddleX + paddleWidth) {
       dy = -dy;
     } else {
-      alert("Fim de Jogo!");
-      document.location.reload();
+      isGameOver = true;
+      drawGameOver();
+      setTimeout(() => {
+        window.location.reload();
+      }, 1200);
       return;
     }
   }
