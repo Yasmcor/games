@@ -137,14 +137,14 @@ function drawBreakout() {
    ========================================================= */
 let pacCanvas, pacCtx;
 let pacX, pacY;
-let pacDir = 0, nextPacDir = 0; // 0: Direita, 1: Baixo, 2: Esquerda, 3: Cima
-let pacSpeed = 2;
+let pacDir = 0, nextPacDir = 0;
+let pacSpeed = 1.5;
 let pacScore = 0;
+let pacLives = 3;
 let pacAnimationFrame;
 
 const tileSize = 20;
 
-// Mapa do Pacman
 const map = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
   [1,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,1],
@@ -155,7 +155,7 @@ const map = [
   [1,2,2,2,2,1,2,2,2,1,2,2,2,1,2,2,2,2,1],
   [1,1,1,1,2,1,1,1,0,1,0,1,1,1,2,1,1,1,1],
   [0,0,0,1,2,1,0,0,0,0,0,0,0,1,2,1,0,0,0],
-  [1,1,1,1,2,1,0,1,1,0,1,1,0,1,2,1,1,1,1],
+  [1,1,1,1,2,1,0,1,0,0,0,1,0,1,2,1,1,1,1],
   [0,0,0,0,2,0,0,1,0,0,0,1,0,0,2,0,0,0,0],
   [1,1,1,1,2,1,0,1,1,1,1,1,0,1,2,1,1,1,1],
   [0,0,0,1,2,1,0,0,0,0,0,0,0,1,2,1,0,0,0],
@@ -168,31 +168,29 @@ const map = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
-// Configuração dos 4 Fantasmas
-let ghosts = [
-  { x: 190, y: 170, color: "#ff0000", dir: 0 }, // Blinky (Vermelho)
-  { x: 170, y: 190, color: "#ffb8ff", dir: 1 }, // Pinky (Rosa)
-  { x: 190, y: 190, color: "#00ffff", dir: 2 }, // Inky (Ciano)
-  { x: 210, y: 190, color: "#ffb852", dir: 3 }  // Clyde (Laranja)
-];
+let ghosts = [];
+
+function resetPositions() {
+  pacX = 9 * tileSize + 10;
+  pacY = 16 * tileSize + 10;
+  pacDir = 0;
+  nextPacDir = 0;
+
+  ghosts = [
+    { x: 9 * tileSize + 10, y: 8 * tileSize + 10, color: "#ff0000", dir: 0 },
+    { x: 9 * tileSize + 10, y: 9 * tileSize + 10, color: "#ffb8ff", dir: 3 },
+    { x: 8 * tileSize + 10, y: 10 * tileSize + 10, color: "#00ffff", dir: 3 },
+    { x: 10 * tileSize + 10, y: 10 * tileSize + 10, color: "#ffb852", dir: 3 }
+  ];
+}
 
 function initPacman() {
   pacCanvas = document.getElementById("pacmanCanvas");
   pacCtx = pacCanvas.getContext("2d");
 
-  // Posiciona Pac-Man alinhado perfeitamente no centro de um piso (Tile)
-  pacX = 9 * tileSize + 10;
-  pacY = 16 * tileSize + 10;
-  pacDir = 0;
-  nextPacDir = 0;
   pacScore = 0;
-
-  ghosts = [
-    { x: 9 * tileSize + 10, y: 8 * tileSize + 10, color: "#ff0000", dir: 0 },
-    { x: 8 * tileSize + 10, y: 9 * tileSize + 10, color: "#ffb8ff", dir: 1 },
-    { x: 9 * tileSize + 10, y: 9 * tileSize + 10, color: "#00ffff", dir: 2 },
-    { x: 10 * tileSize + 10, y: 9 * tileSize + 10, color: "#ffb852", dir: 3 }
-  ];
+  pacLives = 3;
+  resetPositions();
 
   if (pacAnimationFrame) cancelAnimationFrame(pacAnimationFrame);
   drawPacman();
@@ -205,7 +203,6 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowUp") nextPacDir = 3;
 });
 
-// Suporte ao Touch no Celular (Swipe)
 let touchStartX = 0, touchStartY = 0;
 document.addEventListener("DOMContentLoaded", () => {
   const pCanvas = document.getElementById("pacmanCanvas");
@@ -228,7 +225,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// Checa colisão com paredes do mapa
 function canMoveTile(posX, posY, dir) {
   let speed = pacSpeed;
   let newX = posX;
@@ -239,7 +235,7 @@ function canMoveTile(posX, posY, dir) {
   if (dir === 2) newX -= speed;
   if (dir === 3) newY -= speed;
 
-  const r = 7; // Raio de colisão interno
+  const r = 7;
   const points = [
     { x: newX - r, y: newY - r },
     { x: newX + r, y: newY - r },
@@ -259,7 +255,6 @@ function drawPacman() {
   pacCtx.fillStyle = "#1a181e";
   pacCtx.fillRect(0, 0, pacCanvas.width, pacCanvas.height);
 
-  // Desenhar Mapa
   for (let r = 0; r < map.length; r++) {
     for (let c = 0; c < map[r].length; c++) {
       if (map[r][c] === 1) {
@@ -275,21 +270,19 @@ function drawPacman() {
     }
   }
 
-  // Tenta virar na direção desejada com ajuste automático no centro do Tile
   if (canMoveTile(pacX, pacY, nextPacDir)) {
     if (nextPacDir === 0 || nextPacDir === 2) {
       let tileY = Math.floor(pacY / tileSize) * tileSize + 10;
-      if (Math.abs(pacY - tileY) < 6) pacY = tileY; // Alinha Y
+      if (Math.abs(pacY - tileY) < 6) pacY = tileY;
     } else if (nextPacDir === 1 || nextPacDir === 3) {
       let tileX = Math.floor(pacX / tileSize) * tileSize + 10;
-      if (Math.abs(pacX - tileX) < 6) pacX = tileX; // Alinha X
+      if (Math.abs(pacX - tileX) < 6) pacX = tileX;
     }
     if (canMoveTile(pacX, pacY, nextPacDir)) {
       pacDir = nextPacDir;
     }
   }
 
-  // Aplica o movimento na direção atual
   if (canMoveTile(pacX, pacY, pacDir)) {
     if (pacDir === 0) pacX += pacSpeed;
     if (pacDir === 1) pacY += pacSpeed;
@@ -297,7 +290,6 @@ function drawPacman() {
     if (pacDir === 3) pacY -= pacSpeed;
   }
 
-  // Coleta de Pontinhos
   const currentTileC = Math.floor(pacX / tileSize);
   const currentTileR = Math.floor(pacY / tileSize);
   if (map[currentTileR] && map[currentTileR][currentTileC] === 2) {
@@ -305,7 +297,6 @@ function drawPacman() {
     pacScore += 10;
   }
 
-  // Desenhar Pac-Man
   pacCtx.beginPath();
   let startAngle = 0.2 * Math.PI + (pacDir * 0.5 * Math.PI);
   let endAngle = 1.8 * Math.PI + (pacDir * 0.5 * Math.PI);
@@ -315,22 +306,20 @@ function drawPacman() {
   pacCtx.fill();
   pacCtx.closePath();
 
-  // Desenhar Fantasmas
   ghosts.forEach(ghost => {
+    let ghostSpeed = 1;
     if (canMoveTile(ghost.x, ghost.y, ghost.dir)) {
-      if (ghost.dir === 0) ghost.x += 1;
-      if (ghost.dir === 1) ghost.y += 1;
-      if (ghost.dir === 2) ghost.x -= 1;
-      if (ghost.dir === 3) ghost.y -= 1;
+      if (ghost.dir === 0) ghost.x += ghostSpeed;
+      if (ghost.dir === 1) ghost.y += ghostSpeed;
+      if (ghost.dir === 2) ghost.x -= ghostSpeed;
+      if (ghost.dir === 3) ghost.y -= ghostSpeed;
     } else {
-      // Muda de direção ao bater na parede
       let possibleDirs = [0, 1, 2, 3].filter(d => canMoveTile(ghost.x, ghost.y, d));
       if (possibleDirs.length > 0) {
         ghost.dir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
       }
     }
 
-    // Corpo do Fantasma
     pacCtx.beginPath();
     pacCtx.arc(ghost.x, ghost.y - 1, 8, Math.PI, 0, false);
     pacCtx.rect(ghost.x - 8, ghost.y - 1, 16, 8);
@@ -338,7 +327,6 @@ function drawPacman() {
     pacCtx.fill();
     pacCtx.closePath();
 
-    // Olhos do Fantasma
     pacCtx.beginPath();
     pacCtx.arc(ghost.x - 3, ghost.y - 2, 2.5, 0, Math.PI * 2);
     pacCtx.arc(ghost.x + 3, ghost.y - 2, 2.5, 0, Math.PI * 2);
@@ -346,18 +334,31 @@ function drawPacman() {
     pacCtx.fill();
     pacCtx.closePath();
 
-    // Colisão com Pac-Man (Reset)
     let dist = Math.hypot(pacX - ghost.x, pacY - ghost.y);
     if (dist < 12) {
-      initPacman();
+      pacLives--;
+      if (pacLives <= 0) {
+        initPacman();
+      } else {
+        resetPositions();
+      }
       return;
     }
   });
 
-  // Placar Pacman
   pacCtx.font = "bold 14px sans-serif";
   pacCtx.fillStyle = "#ffffff";
   pacCtx.fillText("PONTOS: " + pacScore, 10, pacCanvas.height - 10);
+
+  // Desenhar Vidas (Ícones)
+  for (let i = 0; i < pacLives; i++) {
+    pacCtx.beginPath();
+    pacCtx.arc(pacCanvas.width - 20 - (i * 20), pacCanvas.height - 15, 6, 0.2 * Math.PI, 1.8 * Math.PI);
+    pacCtx.lineTo(pacCanvas.width - 20 - (i * 20), pacCanvas.height - 15);
+    pacCtx.fillStyle = "#f8c257";
+    pacCtx.fill();
+    pacCtx.closePath();
+  }
 
   pacAnimationFrame = requestAnimationFrame(drawPacman);
 }
