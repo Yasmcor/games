@@ -4,13 +4,28 @@
   <meta charset="UTF-8">
   <title>Jogo Quebra-Blocos</title>
   <style>
-    * { padding: 0; margin: 0; }
-    body { background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; color: #fff; font-family: sans-serif; }
-    canvas { background: #222; border: 2px solid #555; box-shadow: 0 0 20px rgba(0,255,200,0.2); }
+    * { padding: 0; margin: 0; box-sizing: border-box; }
+    body { 
+      background: #0d0914; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      height: 100vh; 
+      color: #fff; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+    }
+    canvas { 
+      background: #181124; 
+      border: 3px solid #ff2a75; 
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(255, 42, 117, 0.3), 0 0 15px rgba(0, 229, 255, 0.2); 
+      outline: none;
+    }
   </style>
 </head>
-<body>
-  <canvas id="myCanvas" width="480" height="320"></canvas>
+<body onload="window.focus()">
+  <canvas id="myCanvas" width="500" height="400" tabindex="1"></canvas>
   <script src="game.js"></script>
 </body>
 </html>
